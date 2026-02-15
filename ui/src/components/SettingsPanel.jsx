@@ -162,7 +162,7 @@ export default function SettingsPanel({ settings, onUpdate, isOpen, onClose, use
                 onChange={(e) =>
                   setLocalSettings((s) => ({ ...s, mcpServerUrl: e.target.value }))
                 }
-                placeholder="https://cool.cloudpilot.com.br/mcp"
+                placeholder="https://chat.cloudpilot.com.br/api/mcp"
                 className={cn(
                   'w-full rounded-xl px-3 py-2.5 text-sm font-mono',
                   'bg-input border border-border',

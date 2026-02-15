@@ -23,7 +23,7 @@ router.post('/', async (req, res) => {
         const client = new ChatClient({
             apiKey: process.env.OPENAI_API_KEY,
             model: model || 'gpt-4.1-mini',
-            mcpServerUrl: mcpServerUrl || 'https://cool.cloudpilot.com.br/mcp',
+            mcpServerUrl: mcpServerUrl || 'https://chat.cloudpilot.com.br/api/mcp',
         });
 
         const result = await client.chat(input);

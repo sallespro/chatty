@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { discoverToolsWithFallback, buildMcpTool } from './mcp.js';
 
 const DEFAULT_MODEL = 'gpt-4.1-mini';
-const DEFAULT_MCP_URL = 'https://cool.cloudpilot.com.br/mcp';
+const DEFAULT_MCP_URL = 'https://chat.cloudpilot.com.br/api/mcp';
 
 /**
  * Extract the final text output from a Responses API result.

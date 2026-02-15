@@ -3,7 +3,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { ListToolsResultSchema } from '@modelcontextprotocol/sdk/types.js';
 
-const DEFAULT_FALLBACK_TOOLS = ['echo', 'start-notification-stream', 'fetch'];
+const DEFAULT_FALLBACK_TOOLS = ['fetch', 'search'];
 
 /**
  * Discover available tools from an MCP server.
@@ -22,12 +22,19 @@ export async function discoverTools(mcpServerUrl) {
     let transport;
 
     try {
-        // Try StreamableHTTP transport first
+        // Try the provided URL directly first (StreamableHTTP)
         transport = new StreamableHTTPClientTransport(baseUrl);
         await mcpClient.connect(transport);
     } catch (err) {
-        // Fall back to SSE transport
-        const sseUrl = new URL(mcpServerUrl.replace(/\/mcp$/, '/sse'));
+        console.warn(`StreamableHTTP failed for ${mcpServerUrl}, trying SSE fallback:`, err.message);
+        // Fall back to SSE transport. If URL ends in /mcp, try /sse.
+        // If it's the unified route /api/mcp, it should still be /api/mcp or /api/sse.
+        // We'll try replacing 'mcp' with 'sse' at the end.
+        const sseUrlString = mcpServerUrl.endsWith('/mcp')
+            ? mcpServerUrl.replace(/\/mcp$/, '/sse')
+            : mcpServerUrl;
+
+        const sseUrl = new URL(sseUrlString);
         transport = new SSEClientTransport(sseUrl);
         await mcpClient.connect(transport);
     }

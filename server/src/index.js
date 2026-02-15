@@ -24,12 +24,14 @@ const PORT = process.env.PORT || 3002;
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-// Health check
+// Health check (compatibility)
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // API Routes
 const apiRouter = express.Router();
+
+// Health check (standard)
+apiRouter.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // Public routes
 apiRouter.use('/auth', authRoutes);
@@ -47,6 +49,11 @@ apiRouter.delete('/mcp', handleMcpDelete);
 
 // Mount all API routes
 app.use('/api', apiRouter);
+
+// Legacy MCP Routes Compatibility (Some reverse proxies might still strip /api)
+app.post('/mcp', handleMcpPost);
+app.get('/mcp', handleMcpGet);
+app.delete('/mcp', handleMcpDelete);
 
 // Serve UI static files in production
 const uiDist = resolve(__dirname, '../../ui/dist');

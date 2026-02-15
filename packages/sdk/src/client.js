@@ -1,7 +1,7 @@
 import { createCompletion, discoverToolsWithFallback } from '@chat/lib';
 
 const DEFAULT_MODEL = 'gpt-4.1-mini';
-const DEFAULT_MCP_URL = 'https://cool.cloudpilot.com.br/mcp';
+const DEFAULT_MCP_URL = 'https://chat.cloudpilot.com.br/api/mcp';
 
 /**
  * Stateful chat client that wraps the core library.

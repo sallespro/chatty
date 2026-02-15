@@ -4,7 +4,7 @@ const SETTINGS_KEY = 'chat_settings';
 
 const DEFAULT_SETTINGS = {
     model: 'gpt-4.1-mini',
-    mcpServerUrl: 'https://cool.cloudpilot.com.br/mcp',
+    mcpServerUrl: 'https://chat.cloudpilot.com.br/api/mcp',
 };
 
 export function useSettings() {
