@@ -1,0 +1,13 @@
+{
+  "name": "@chat/lib",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "dependencies": {
+    "openai": "^4.80.0",
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}
