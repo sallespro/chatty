@@ -11,10 +11,13 @@ const router = Router();
 router.post('/', async (req, res) => {
     try {
         const { input, model, mcpServerUrl } = req.body;
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
         if (!input || typeof input !== 'string') {
             return res.status(400).json({ error: 'input is required (string)' });
         }
+
+        console.log(`[Chat] Request from ${clientIp}: "${input.slice(0, 50)}${input.length > 50 ? '...' : ''}" (model: ${model || 'default'})`);
 
         if (!process.env.OPENAI_API_KEY) {
             return res.status(500).json({ error: 'OpenAI API key not configured on server' });
@@ -34,6 +37,8 @@ router.post('/', async (req, res) => {
                 (result.usage.input_tokens || 0) + (result.usage.output_tokens || 0);
             req.trackTokenUsage(totalTokens);
         }
+
+        console.log(`[Chat] Response for ${clientIp}: ${result.toolsDiscovered?.length || 0} tools discovered`);
 
         res.json({
             success: true,

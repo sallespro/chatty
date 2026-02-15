@@ -60,7 +60,7 @@ export default function AuthGate({ onAuthenticated }) {
           </div>
           <h1 className="text-3xl font-bold gradient-text mb-2">Chatty</h1>
           <p className="text-muted-foreground text-sm">
-            Powered by OpenAI + MCP Tools
+            cloudpilot
           </p>
         </div>
 

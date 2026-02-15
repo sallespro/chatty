@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Save, Check, X } from 'lucide-react';
+import { Send, Save, Check, X, MessageSquare } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
@@ -7,7 +7,7 @@ import { apiClient } from '../lib/api';
 
 function TypingIndicator() {
   return (
-    <div className="flex items-center gap-1 px-4 py-3">
+    <div className="flex items-center gap-1 px-4 py-3 animate-fade-in">
       <div className="flex gap-1">
         <span className="typing-dot w-2 h-2 rounded-full bg-primary/60 inline-block" />
         <span className="typing-dot w-2 h-2 rounded-full bg-primary/60 inline-block" />
@@ -265,12 +265,12 @@ export default function ChatWindow({ session, onAddMessage, settings, workspace 
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-8">
         {session.messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full animate-fade-in">
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 glow-primary">
-                <span className="text-2xl">✨</span>
+                <MessageSquare className="text-primary" size={32} />
               </div>
               <h3 className="text-lg font-semibold mb-1">Start a conversation</h3>
               <p className="text-sm text-muted-foreground">
@@ -287,7 +287,7 @@ export default function ChatWindow({ session, onAddMessage, settings, workspace 
         ))}
 
         {isLoading && <TypingIndicator />}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-4" />
       </div>
 
       {/* Input area */}

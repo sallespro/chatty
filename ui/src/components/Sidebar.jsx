@@ -117,9 +117,9 @@ export default function Sidebar({
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Sparkles size={16} className="text-primary" />
+              <MessageSquare size={16} className="text-primary" />
             </div>
-            <h1 className="text-lg font-bold gradient-text">AI Chat</h1>
+            <h1 className="text-lg font-bold gradient-text">cloudpilot</h1>
           </div>
           <button
             onClick={onCreateSession}
@@ -267,7 +267,7 @@ export default function Sidebar({
         {/* Footer */}
         <div className="p-3 border-t border-sidebar-border">
           <p className="text-[10px] text-muted-foreground text-center">
-            Powered by OpenAI + MCP
+            cloudpilot
           </p>
         </div>
       </div>

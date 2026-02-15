@@ -116,7 +116,7 @@ export default function App() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-border glass-subtle">
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-medium truncate max-w-md">
-              {activeSession?.title || 'Chatty'}
+              {activeSession?.title || 'cloudpilot'}
             </h2>
             {activeSession && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono">

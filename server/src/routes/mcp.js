@@ -119,6 +119,12 @@ export async function handleMcpPost(req, res) {
             sessionIdGenerator: undefined, // stateless
         });
         await server.connect(transport);
+
+        const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        if (req.body?.method) {
+            console.log(`[MCP] ${req.body.method} from ${clientIp}`, req.body.params || '');
+        }
+
         await transport.handleRequest(req, res, req.body);
         res.on('close', () => {
             transport.close();
