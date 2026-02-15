@@ -8,10 +8,13 @@
   },
   "dependencies": {
     "@chat/sdk": "1.0.0",
-    "express": "^4.21.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@tavily/core": "^0.7.1",
     "cors": "^2.8.5",
-    "jsonwebtoken": "^9.0.2",
     "dotenv": "^16.4.5",
-    "uuid": "^9.0.0"
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.0",
+    "zod": "^4.3.6"
   }
 }

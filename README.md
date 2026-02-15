@@ -214,6 +214,28 @@ curl -X POST http://localhost:3002/share \
 
 ---
 
+### MCP Server (Public)
+
+The server exposes a Model Context Protocol (MCP) endpoint at `/mcp` using Streamable HTTP.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/mcp` | JSON-RPC 2.0 endpoint for MCP |
+
+**Available Tools:**
+- `search(query, maxResults)` — Web search using Tavily
+- `fetch(url)` — Fetch content from a URL
+
+**Example Request:**
+```bash
+curl -X POST http://localhost:3002/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc": "2.0", "method": "tools/call", "params": {"name": "search", "arguments": {"query": "weather"}}, "id": 1}'
+```
+
+---
+
 ## ⚙️ Configuration
 
 | Variable | Default | Description |

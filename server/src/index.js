@@ -15,6 +15,7 @@ import shareRoutes from './routes/share.js';
 import sessionRoutes from './routes/sessions.js';
 import { authMiddleware } from './middleware/auth.js';
 import { rateLimitMiddleware } from './middleware/rateLimit.js';
+import { handleMcpPost, handleMcpGet, handleMcpDelete } from './routes/mcp.js';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -38,6 +39,11 @@ app.use('/sessions', authMiddleware, sessionRoutes);
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// MCP Server (Streamable HTTP)
+app.post('/mcp', handleMcpPost);
+app.get('/mcp', handleMcpGet);
+app.delete('/mcp', handleMcpDelete);
 
 // Serve UI static files in production
 const uiDist = resolve(__dirname, '../../ui/dist');
