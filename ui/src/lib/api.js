@@ -68,11 +68,51 @@ class ApiClient {
         return data;
     }
 
+    async getMe() {
+        return this.#fetch('/auth/me');
+    }
+
     // Chat
     async chat(input, { model, mcpServerUrl } = {}) {
         return this.#fetch('/chat', {
             method: 'POST',
             body: JSON.stringify({ input, model, mcpServerUrl }),
+        });
+    }
+
+    // Sessions
+    async listSessions() {
+        return this.#fetch('/sessions');
+    }
+
+    async createSession(title) {
+        return this.#fetch('/sessions', {
+            method: 'POST',
+            body: JSON.stringify({ title }),
+        });
+    }
+
+    async getSession(sessionId) {
+        return this.#fetch(`/sessions/${sessionId}`);
+    }
+
+    async updateSession(sessionId, updates) {
+        return this.#fetch(`/sessions/${sessionId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
+
+    async deleteSession(sessionId) {
+        return this.#fetch(`/sessions/${sessionId}`, {
+            method: 'DELETE',
+        });
+    }
+
+    async addSessionMessage(sessionId, message) {
+        return this.#fetch(`/sessions/${sessionId}/messages`, {
+            method: 'POST',
+            body: JSON.stringify(message),
         });
     }
 

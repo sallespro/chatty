@@ -20,6 +20,14 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(apiClient.isAuthenticated());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sharedId, setSharedId] = useState(() => getShareIdFromPath());
+  const [userInfo, setUserInfo] = useState(() => {
+    // Restore from localStorage on load
+    const name = localStorage.getItem('chat_user_name');
+    const apiKeyId = localStorage.getItem('chat_api_key_id');
+    const apiKeySecret = localStorage.getItem('chat_api_secret');
+    if (name && apiKeyId) return { name, apiKeyId, apiKeySecret };
+    return null;
+  });
 
   const {
     sessions,
@@ -29,6 +37,7 @@ export default function App() {
     selectSession,
     deleteSession,
     addMessage,
+    refreshSessions,
   } = useChatSessions();
 
   const { settings, updateSettings } = useSettings();
@@ -41,14 +50,37 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const handleAuthenticated = useCallback(() => {
+  // Load user info from /auth/me if authenticated but missing userInfo
+  useEffect(() => {
+    if (isAuthenticated && !userInfo) {
+      apiClient.getMe().then(data => {
+        setUserInfo(prev => ({
+          ...prev,
+          name: data.name,
+          apiKeyId: data.apiKeyId,
+          apiKeySecret: localStorage.getItem('chat_api_secret') || '',
+        }));
+        localStorage.setItem('chat_user_name', data.name);
+        localStorage.setItem('chat_api_key_id', data.apiKeyId);
+      }).catch(() => {});
+    }
+  }, [isAuthenticated, userInfo]);
+
+  const handleAuthenticated = useCallback((info) => {
     setIsAuthenticated(true);
+    if (info) setUserInfo(info);
     workspace.refresh();
-  }, [workspace]);
+    refreshSessions();
+  }, [workspace, refreshSessions]);
 
   const handleLogout = useCallback(() => {
     apiClient.clearToken();
+    localStorage.removeItem('chat_api_secret');
+    localStorage.removeItem('chat_user_name');
+    localStorage.removeItem('chat_api_key_id');
+    localStorage.removeItem('chat_active_session');
     setIsAuthenticated(false);
+    setUserInfo(null);
   }, []);
 
   // Shared content view (public, no auth needed)
@@ -84,7 +116,7 @@ export default function App() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-border glass-subtle">
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-medium truncate max-w-md">
-              {activeSession?.title || 'AI Chat'}
+              {activeSession?.title || 'Chatty'}
             </h2>
             {activeSession && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono">
@@ -93,6 +125,11 @@ export default function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {userInfo?.name && (
+              <span className="text-[10px] text-muted-foreground mr-1">
+                {userInfo.name}
+              </span>
+            )}
             <button
               onClick={() => setSettingsOpen(true)}
               className={cn(
@@ -131,6 +168,7 @@ export default function App() {
         onUpdate={updateSettings}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+        userInfo={userInfo}
       />
     </div>
   );

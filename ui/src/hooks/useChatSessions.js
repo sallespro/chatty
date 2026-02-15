@@ -1,109 +1,141 @@
 import { useState, useCallback, useEffect } from 'react';
+import { apiClient } from '../lib/api';
 
-const SESSIONS_KEY = 'chat_sessions';
-const ACTIVE_SESSION_KEY = 'chat_active_session';
-
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
-
-function loadSessions() {
-    try {
-        const raw = localStorage.getItem(SESSIONS_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch {
-        return [];
-    }
-}
-
-function saveSessions(sessions) {
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
-}
-
-function loadActiveSessionId() {
-    return localStorage.getItem(ACTIVE_SESSION_KEY);
-}
-
-function saveActiveSessionId(id) {
-    localStorage.setItem(ACTIVE_SESSION_KEY, id);
-}
-
+/**
+ * Server-backed chat sessions hook.
+ * Sessions are stored on the server, scoped by the authenticated user's API key.
+ */
 export function useChatSessions() {
-    const [sessions, setSessions] = useState(() => loadSessions());
+    const [sessions, setSessions] = useState([]);
     const [activeSessionId, setActiveSessionId] = useState(() => {
-        const id = loadActiveSessionId();
-        const sessions = loadSessions();
-        if (id && sessions.some((s) => s.id === id)) return id;
-        return sessions.length > 0 ? sessions[0].id : null;
+        return localStorage.getItem('chat_active_session') || null;
     });
+    const [activeSession, setActiveSession] = useState(null);
+    const [loading, setLoading] = useState(false);
 
-    // Persist sessions
+    // Persist active session ID locally (just the selection, not the data)
     useEffect(() => {
-        saveSessions(sessions);
-    }, [sessions]);
-
-    // Persist active session
-    useEffect(() => {
-        if (activeSessionId) saveActiveSessionId(activeSessionId);
+        if (activeSessionId) {
+            localStorage.setItem('chat_active_session', activeSessionId);
+        }
     }, [activeSessionId]);
 
-    const activeSession = sessions.find((s) => s.id === activeSessionId) || null;
+    // Load sessions from server
+    const refresh = useCallback(async () => {
+        if (!apiClient.isAuthenticated()) return;
+        setLoading(true);
+        try {
+            const data = await apiClient.listSessions();
+            setSessions(data.sessions || []);
+        } catch (err) {
+            console.error('Failed to load sessions:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-    const createSession = useCallback(() => {
-        const newSession = {
-            id: generateId(),
-            title: 'New Chat',
-            messages: [],
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
+    // Load sessions on mount
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
+
+    // Load active session details (with messages)
+    useEffect(() => {
+        if (!activeSessionId) {
+            setActiveSession(null);
+            return;
+        }
+
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const data = await apiClient.getSession(activeSessionId);
+                if (!cancelled) {
+                    setActiveSession(data.session);
+                }
+            } catch {
+                if (!cancelled) {
+                    setActiveSession(null);
+                    setActiveSessionId(null);
+                }
+            }
         };
-        setSessions((prev) => [newSession, ...prev]);
-        setActiveSessionId(newSession.id);
-        return newSession;
+        load();
+
+        return () => { cancelled = true; };
+    }, [activeSessionId, sessions]); // re-fetch when sessions list changes
+
+    const createSession = useCallback(async () => {
+        try {
+            const data = await apiClient.createSession('New Chat');
+            setSessions(prev => [{ ...data.session, messageCount: 0 }, ...prev]);
+            setActiveSessionId(data.session.id);
+            setActiveSession(data.session);
+            return data.session;
+        } catch (err) {
+            console.error('Failed to create session:', err);
+        }
     }, []);
 
     const selectSession = useCallback((id) => {
         setActiveSessionId(id);
     }, []);
 
-    const deleteSession = useCallback(
-        (id) => {
-            setSessions((prev) => {
-                const next = prev.filter((s) => s.id !== id);
+    const deleteSession = useCallback(async (id) => {
+        try {
+            await apiClient.deleteSession(id);
+            setSessions(prev => {
+                const next = prev.filter(s => s.id !== id);
                 if (activeSessionId === id) {
-                    setActiveSessionId(next.length > 0 ? next[0].id : null);
+                    const newActive = next.length > 0 ? next[0].id : null;
+                    setActiveSessionId(newActive);
                 }
                 return next;
             });
-        },
-        [activeSessionId]
-    );
+        } catch (err) {
+            console.error('Failed to delete session:', err);
+        }
+    }, [activeSessionId]);
 
-    const addMessage = useCallback(
-        (sessionId, message) => {
-            setSessions((prev) =>
-                prev.map((s) => {
-                    if (s.id !== sessionId) return s;
-                    const messages = [...s.messages, { ...message, id: generateId(), timestamp: Date.now() }];
-                    // Auto-title from first user message
-                    const title =
-                        s.messages.length === 0 && message.role === 'user'
-                            ? message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '')
-                            : s.title;
-                    return { ...s, messages, title, updatedAt: Date.now() };
-                })
-            );
-        },
-        []
-    );
+    const addMessage = useCallback(async (sessionId, message) => {
+        // Optimistic local update for instant feedback
+        setActiveSession(prev => {
+            if (!prev || prev.id !== sessionId) return prev;
+            const newMsg = {
+                id: Date.now().toString(36),
+                ...message,
+                timestamp: Date.now(),
+            };
+            const messages = [...(prev.messages || []), newMsg];
+            const title = prev.messages.length === 0 && message.role === 'user'
+                ? message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '')
+                : prev.title;
+            return { ...prev, messages, title };
+        });
+
+        // Persist to server
+        try {
+            const data = await apiClient.addSessionMessage(sessionId, message);
+            // Update session title in the list if it changed
+            if (data.sessionTitle) {
+                setSessions(prev => prev.map(s =>
+                    s.id === sessionId ? { ...s, title: data.sessionTitle, messageCount: (s.messageCount || 0) + 1 } : s
+                ));
+            }
+        } catch (err) {
+            console.error('Failed to save message:', err);
+        }
+    }, []);
 
     return {
         sessions,
         activeSession,
         activeSessionId,
+        sessionsLoading: loading,
         createSession,
         selectSession,
         deleteSession,
         addMessage,
+        refreshSessions: refresh,
     };
 }

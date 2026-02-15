@@ -19,7 +19,11 @@ export default function AuthGate({ onAuthenticated }) {
     try {
       const data = await apiClient.register(name.trim());
       setCreatedKey(data);
-      onAuthenticated();
+      // Save credentials so they appear in Settings panel
+      localStorage.setItem('chat_api_secret', data.apiKeySecret);
+      localStorage.setItem('chat_user_name', data.name);
+      localStorage.setItem('chat_api_key_id', data.apiKeyId);
+      onAuthenticated({ name: data.name, apiKeyId: data.apiKeyId, apiKeySecret: data.apiKeySecret });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -33,8 +37,12 @@ export default function AuthGate({ onAuthenticated }) {
     setError('');
     setLoading(true);
     try {
-      await apiClient.exchangeToken(secret.trim());
-      onAuthenticated();
+      const data = await apiClient.exchangeToken(secret.trim());
+      // Save credentials so they appear in Settings panel
+      localStorage.setItem('chat_api_secret', secret.trim());
+      localStorage.setItem('chat_user_name', data.name);
+      localStorage.setItem('chat_api_key_id', data.apiKeyId);
+      onAuthenticated({ name: data.name, apiKeyId: data.apiKeyId, apiKeySecret: secret.trim() });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,7 +58,7 @@ export default function AuthGate({ onAuthenticated }) {
           <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 glow-primary">
             <Sparkles size={32} className="text-primary" />
           </div>
-          <h1 className="text-3xl font-bold gradient-text mb-2">AI Chat</h1>
+          <h1 className="text-3xl font-bold gradient-text mb-2">Chatty</h1>
           <p className="text-muted-foreground text-sm">
             Powered by OpenAI + MCP Tools
           </p>
@@ -168,7 +176,7 @@ export default function AuthGate({ onAuthenticated }) {
                 {createdKey.apiKeySecret}
               </code>
               <p className="text-[10px] text-muted-foreground">
-                This cannot be retrieved again. Store it securely.
+                You can also find this in Settings after entering the app.
               </p>
             </div>
           )}

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { store } from '../store.js';
-import { signToken } from '../middleware/auth.js';
+import { signToken, authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -46,6 +46,14 @@ router.post('/token', (req, res) => {
     const token = signToken({ apiKeyId: apiKey.id, name: apiKey.name });
 
     res.json({ token, apiKeyId: apiKey.id, name: apiKey.name });
+});
+
+/**
+ * GET /auth/me
+ * Get current user info from JWT token.
+ */
+router.get('/me', authMiddleware, (req, res) => {
+    res.json({ apiKeyId: req.apiKeyId, name: req.apiKeyName });
 });
 
 export default router;

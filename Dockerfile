@@ -35,7 +35,7 @@ RUN mkdir -p /app/data/workspaces
 ENV NODE_ENV=production
 
 # Expose the port
-EXPOSE 3001
+EXPOSE 3002
 
 # Start the server
 CMD ["node", "server/src/index.js"]
