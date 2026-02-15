@@ -24,33 +24,37 @@ const PORT = process.env.PORT || 3002;
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-// Public routes
-app.use('/auth', authRoutes);
+// Health check
+app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// Share: GET is public, POST requires auth (handled inside the router)
-app.use('/share', shareRoutes);
+// API Routes
+const apiRouter = express.Router();
+
+// Public routes
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/share', shareRoutes);
 
 // Protected routes
-app.use('/chat', authMiddleware, rateLimitMiddleware(), chatRoutes);
-app.use('/workspace', authMiddleware, workspaceRoutes);
-app.use('/sessions', authMiddleware, sessionRoutes);
-
-// Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+apiRouter.use('/chat', authMiddleware, rateLimitMiddleware(), chatRoutes);
+apiRouter.use('/workspace', authMiddleware, workspaceRoutes);
+apiRouter.use('/sessions', authMiddleware, sessionRoutes);
 
 // MCP Server (Streamable HTTP)
-app.post('/mcp', handleMcpPost);
-app.get('/mcp', handleMcpGet);
-app.delete('/mcp', handleMcpDelete);
+apiRouter.post('/mcp', handleMcpPost);
+apiRouter.get('/mcp', handleMcpGet);
+apiRouter.delete('/mcp', handleMcpDelete);
+
+// Mount all API routes
+app.use('/api', apiRouter);
 
 // Serve UI static files in production
 const uiDist = resolve(__dirname, '../../ui/dist');
 if (existsSync(uiDist)) {
     app.use(express.static(uiDist));
-    // SPA fallback — serve index.html for all non-API routes
-    app.get('*', (req, res) => {
+    // SPA fallback — serve index.html for all non-API, non-static routes
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api')) return next();
         res.sendFile(resolve(uiDist, 'index.html'));
     });
     console.log('📦 Serving UI from', uiDist);
