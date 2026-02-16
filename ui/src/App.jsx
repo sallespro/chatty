@@ -17,17 +17,11 @@ function getShareIdFromPath() {
 }
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(apiClient.isAuthenticated());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sharedId, setSharedId] = useState(() => getShareIdFromPath());
-  const [userInfo, setUserInfo] = useState(() => {
-    // Restore from localStorage on load
-    const name = localStorage.getItem('chat_user_name');
-    const apiKeyId = localStorage.getItem('chat_api_key_id');
-    const apiKeySecret = localStorage.getItem('chat_api_secret');
-    if (name && apiKeyId) return { name, apiKeyId, apiKeySecret };
-    return null;
-  });
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const {
     sessions,
@@ -43,6 +37,59 @@ export default function App() {
   const { settings, updateSettings } = useSettings();
   const workspace = useWorkspace();
 
+  // Restore session on mount from stored refresh token
+  useEffect(() => {
+    const init = async () => {
+      const refreshToken = localStorage.getItem('chat_refresh_token');
+      const storedToken = localStorage.getItem('chat_access_token');
+
+      if (refreshToken && storedToken) {
+        // Try to use the stored token first
+        apiClient.setToken(storedToken);
+
+        // Try to get user info to verify the token is still valid
+        try {
+          const me = await apiClient.getMe();
+          setUserInfo({
+            name: me.name,
+            apiKeyId: me.apiKeyId,
+            apiKeySecret: localStorage.getItem('chat_api_secret') || '',
+          });
+          setIsAuthenticated(true);
+        } catch {
+          // Token expired, try to refresh
+          try {
+            const res = await fetch('/api/auth/refresh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken }),
+            });
+            const data = await res.json();
+            if (res.ok && data.token) {
+              apiClient.setToken(data.token);
+              localStorage.setItem('chat_access_token', data.token);
+              localStorage.setItem('chat_refresh_token', data.refreshToken);
+              setIsAuthenticated(true);
+
+              const me = await apiClient.getMe();
+              setUserInfo({
+                name: me.name,
+                apiKeyId: me.apiKeyId,
+                apiKeySecret: localStorage.getItem('chat_api_secret') || '',
+              });
+            }
+          } catch {
+            // Both failed — user must log in again
+            handleLogout();
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    init();
+  }, []);
+
   // Listen for URL changes (back/forward)
   useEffect(() => {
     const handlePopState = () => setSharedId(getShareIdFromPath());
@@ -50,31 +97,22 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Load user info from /auth/me if authenticated but missing userInfo
-  useEffect(() => {
-    if (isAuthenticated && !userInfo) {
-      apiClient.getMe().then(data => {
-        setUserInfo(prev => ({
-          ...prev,
-          name: data.name,
-          apiKeyId: data.apiKeyId,
-          apiKeySecret: localStorage.getItem('chat_api_secret') || '',
-        }));
-        localStorage.setItem('chat_user_name', data.name);
-        localStorage.setItem('chat_api_key_id', data.apiKeyId);
-      }).catch(() => {});
-    }
-  }, [isAuthenticated, userInfo]);
-
   const handleAuthenticated = useCallback((info) => {
     setIsAuthenticated(true);
     if (info) setUserInfo(info);
+    // Store the access token for session restore
+    const token = apiClient.getToken();
+    if (token) {
+      localStorage.setItem('chat_access_token', token);
+    }
     workspace.refresh();
     refreshSessions();
   }, [workspace, refreshSessions]);
 
   const handleLogout = useCallback(() => {
     apiClient.clearToken();
+    localStorage.removeItem('chat_access_token');
+    localStorage.removeItem('chat_refresh_token');
     localStorage.removeItem('chat_api_secret');
     localStorage.removeItem('chat_user_name');
     localStorage.removeItem('chat_api_key_id');
@@ -93,6 +131,14 @@ export default function App() {
           setSharedId(null);
         }}
       />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-muted-foreground text-sm">Loading...</div>
+      </div>
     );
   }
 

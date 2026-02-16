@@ -1,59 +1,102 @@
 import { Router } from 'express';
+import { supabaseAdmin } from '../supabase.js';
 import { store } from '../store.js';
-import { signToken, authMiddleware } from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
 /**
- * POST /auth/register
- * Register a new API key. Returns the key secret and a JWT.
+ * POST /auth/login
+ * Log in with email and password via Supabase Auth.
+ * Auto-creates an API key on first login.
  */
-router.post('/register', (req, res) => {
-    const { name } = req.body;
+router.post('/login', async (req, res) => {
+    const { email, password } = req.body;
 
-    if (!name || typeof name !== 'string') {
-        return res.status(400).json({ error: 'name is required (string)' });
+    if (!email || !password) {
+        return res.status(400).json({ error: 'email and password are required' });
     }
 
-    const apiKey = store.createApiKey(name.trim());
-    const token = signToken({ apiKeyId: apiKey.id, name: apiKey.name });
+    try {
+        const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email, password });
 
-    res.status(201).json({
-        apiKeyId: apiKey.id,
-        apiKeySecret: apiKey.secret,
-        name: apiKey.name,
-        token,
-        message: 'Save your API key secret — it cannot be retrieved again.',
-    });
+        if (error) {
+            return res.status(401).json({ error: error.message });
+        }
+
+        const user = data.user;
+        const userName = user.user_metadata?.name || email.split('@')[0];
+
+        // Find or create API key for this user
+        const apiKey = await store.findOrCreateApiKey(user.id, userName);
+
+        res.json({
+            token: data.session.access_token,
+            refreshToken: data.session.refresh_token,
+            expiresAt: data.session.expires_at,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: userName,
+            },
+            apiKeyId: apiKey.id,
+            apiKeySecret: apiKey.secret,
+            name: userName,
+        });
+    } catch (err) {
+        console.error('Login error:', err);
+        res.status(500).json({ error: 'Login failed' });
+    }
 });
 
 /**
- * POST /auth/token
- * Exchange an API key secret for a JWT.
+ * POST /auth/refresh
+ * Refresh an expired access token.
  */
-router.post('/token', (req, res) => {
-    const { secret } = req.body;
+router.post('/refresh', async (req, res) => {
+    const { refreshToken } = req.body;
 
-    if (!secret || typeof secret !== 'string') {
-        return res.status(400).json({ error: 'secret is required' });
+    if (!refreshToken) {
+        return res.status(400).json({ error: 'refreshToken is required' });
     }
 
-    const apiKey = store.findBySecret(secret);
-    if (!apiKey) {
-        return res.status(401).json({ error: 'Invalid API key' });
+    try {
+        const { data, error } = await supabaseAdmin.auth.refreshSession({ refresh_token: refreshToken });
+
+        if (error) {
+            return res.status(401).json({ error: error.message });
+        }
+
+        res.json({
+            token: data.session.access_token,
+            refreshToken: data.session.refresh_token,
+            expiresAt: data.session.expires_at,
+        });
+    } catch (err) {
+        console.error('Refresh error:', err);
+        res.status(500).json({ error: 'Token refresh failed' });
     }
+});
 
-    const token = signToken({ apiKeyId: apiKey.id, name: apiKey.name });
-
-    res.json({ token, apiKeyId: apiKey.id, name: apiKey.name });
+/**
+ * POST /auth/logout
+ * Sign out the current user.
+ */
+router.post('/logout', async (req, res) => {
+    // Server-side logout is optional since Supabase JWTs are stateless
+    res.json({ success: true });
 });
 
 /**
  * GET /auth/me
- * Get current user info from JWT token.
+ * Get current user info from Supabase token.
  */
 router.get('/me', authMiddleware, (req, res) => {
-    res.json({ apiKeyId: req.apiKeyId, name: req.apiKeyName });
+    res.json({
+        userId: req.userId,
+        apiKeyId: req.apiKeyId,
+        name: req.apiKeyName,
+    });
 });
 
 export default router;

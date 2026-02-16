@@ -17,7 +17,11 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the frontend
+# Build the frontend (VITE_* vars are baked into the bundle at build time)
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 RUN cd ui && npx vite build
 
 # Production stage

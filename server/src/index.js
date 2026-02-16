@@ -69,8 +69,9 @@ if (existsSync(uiDist)) {
 
 app.listen(PORT, () => {
     console.log(`🚀 Chatty server running on http://localhost:${PORT}`);
-    console.log(`   POST /auth/register      — Register a new API key`);
-    console.log(`   POST /auth/token         — Exchange key for JWT`);
+    console.log(`   POST /auth/login         — Login with Supabase`);
+    console.log(`   POST /auth/refresh       — Refresh token`);
+    console.log(`   POST /auth/logout        — Logout`);
     console.log(`   GET  /auth/me            — Current user info`);
     console.log(`   POST /chat               — Send a chat message`);
     console.log(`   CRUD /sessions           — Manage chat sessions`);

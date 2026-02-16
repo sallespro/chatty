@@ -5,23 +5,18 @@ class ApiClient {
 
     setToken(token) {
         this.#token = token;
-        localStorage.setItem('chat_jwt', token);
     }
 
     getToken() {
-        if (!this.#token) {
-            this.#token = localStorage.getItem('chat_jwt');
-        }
         return this.#token;
     }
 
     clearToken() {
         this.#token = null;
-        localStorage.removeItem('chat_jwt');
     }
 
     isAuthenticated() {
-        return !!this.getToken();
+        return !!this.#token;
     }
 
     async #fetch(path, options = {}) {
@@ -50,19 +45,10 @@ class ApiClient {
     }
 
     // Auth
-    async register(name) {
-        const data = await this.#fetch('/auth/register', {
+    async login(email, password) {
+        const data = await this.#fetch('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ name }),
-        });
-        this.setToken(data.token);
-        return data;
-    }
-
-    async exchangeToken(secret) {
-        const data = await this.#fetch('/auth/token', {
-            method: 'POST',
-            body: JSON.stringify({ secret }),
+            body: JSON.stringify({ email, password }),
         });
         this.setToken(data.token);
         return data;
